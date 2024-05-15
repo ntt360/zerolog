@@ -479,6 +479,35 @@ func (l Logger) Write(p []byte) (n int, err error) {
 	return
 }
 
+// SetOutput
+func (l *Logger) SetOutput(w io.Writer) {
+	oldF := l.w
+	if w == nil {
+		w = io.Discard
+	}
+	lw, ok := w.(LevelWriter)
+	if !ok {
+		lw = LevelWriterAdapter{w}
+	}
+
+	l.w = lw
+
+	if closer, ok := oldF.(io.Closer); ok {
+		// Close the writer to flush any buffered message. Otherwise the message
+		// will be lost as os.Exit() terminates the program immediately.
+		closer.Close()
+	}
+}
+
+// Close
+func (l *Logger) Close() {
+	if closer, ok := l.w.(io.Closer); ok {
+		// Close the writer to flush any buffered message. Otherwise the message
+		// will be lost as os.Exit() terminates the program immediately.
+		closer.Close()
+	}
+}
+
 func (l *Logger) newEvent(level Level, done func(string)) *Event {
 	enabled := l.should(level)
 	if !enabled {
