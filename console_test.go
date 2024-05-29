@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rs/zerolog"
+	"github.com/ntt360/zerolog"
 )
 
 func ExampleConsoleWriter() {
@@ -423,14 +423,14 @@ func TestConsoleWriterConfiguration(t *testing.T) {
 	})
 
 	t.Run("Sets TimeFormat and TimeLocation", func(t *testing.T) {
-		locs := []*time.Location{ time.Local, time.UTC }
+		locs := []*time.Location{time.Local, time.UTC}
 
 		for _, location := range locs {
 			buf := &bytes.Buffer{}
 			w := zerolog.ConsoleWriter{
-				Out: buf,
-				NoColor: true,
-				TimeFormat: time.RFC3339,
+				Out:          buf,
+				NoColor:      true,
+				TimeFormat:   time.RFC3339,
 				TimeLocation: location,
 			}
 

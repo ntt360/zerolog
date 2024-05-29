@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ntt360/zerolog"
+	"github.com/ntt360/zerolog/hlog/internal/mutil"
+	"github.com/ntt360/zerolog/log"
 	"github.com/rs/xid"
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/hlog/internal/mutil"
-	"github.com/rs/zerolog/log"
 )
 
 // FromRequest gets the logger in the request's context.

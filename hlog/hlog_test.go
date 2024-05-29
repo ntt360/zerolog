@@ -14,9 +14,9 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/ntt360/zerolog"
+	"github.com/ntt360/zerolog/internal/cbor"
 	"github.com/rs/xid"
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/internal/cbor"
 )
 
 func decodeIfBinary(out *bytes.Buffer) string {
