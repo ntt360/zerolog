@@ -118,9 +118,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"strconv"
 	"strings"
+	"sync/atomic"
+	"time"
 )
 
 // Level defines log levels.
@@ -234,6 +237,7 @@ type Logger struct {
 	hooks   []Hook
 	stack   bool
 	ctx     context.Context
+	lock    int32
 }
 
 // New creates a root logger with given output writer. If the output writer implements
@@ -479,29 +483,60 @@ func (l Logger) Write(p []byte) (n int, err error) {
 	return
 }
 
+// GetOutput
+func (l *Logger) GetOutput() io.Writer {
+	// Backoff strategy to prevent busy-wait
+	backoff := 1 * time.Nanosecond
+	maxRetries := 10
+
+	// Attempt to acquire the lock with backoff strategy
+	for i := 0; i < maxRetries; i++ {
+		// Acquired the lock, exit loop
+		defer atomic.StoreInt32(&l.lock, 0) // Ensure the lock is released
+
+		// If we reached here, we failed to acquire the lock after maxRetries
+		if atomic.CompareAndSwapInt32(&l.lock, 0, 1) {
+			return l.w
+		}
+		time.Sleep(backoff)
+		backoff = time.Duration(math.Min(float64(backoff*2), float64(100*time.Millisecond)))
+	}
+
+	return nil
+}
+
 // SetOutput
 func (l *Logger) SetOutput(w io.Writer) {
-	oldF := l.w
-	if w == nil {
-		w = io.Discard
-	}
-	lw, ok := w.(LevelWriter)
-	if !ok {
-		lw = LevelWriterAdapter{w}
-	}
+	// Backoff strategy to prevent busy-wait
+	backoff := 1 * time.Nanosecond
+	maxRetries := 10
 
-	l.w = lw
+	// Attempt to acquire the lock with backoff strategy
+	for i := 0; i < maxRetries; i++ {
+		if atomic.CompareAndSwapInt32(&l.lock, 0, 1) {
+			// Acquired the lock, exit loop
+			defer atomic.StoreInt32(&l.lock, 0) // Ensure the lock is released
 
-	if closer, ok := oldF.(io.Closer); ok {
-		// Close the writer to flush any buffered message. Otherwise the message
-		// will be lost as os.Exit() terminates the program immediately.
-		closer.Close()
+			if w == nil {
+				w = io.Discard
+			}
+			lw, ok := w.(LevelWriter)
+			if !ok {
+				lw = LevelWriterAdapter{w}
+			}
+
+			l.w = lw
+
+			return
+		}
+		time.Sleep(backoff)
+		backoff = time.Duration(math.Min(float64(backoff*2), float64(100*time.Millisecond)))
 	}
 }
 
 // Close
-func (l *Logger) Close() {
-	if closer, ok := l.w.(io.Closer); ok {
+func (l *Logger) Close(w io.Writer) {
+	if closer, ok := w.(io.Closer); ok {
 		// Close the writer to flush any buffered message. Otherwise the message
 		// will be lost as os.Exit() terminates the program immediately.
 		closer.Close()
