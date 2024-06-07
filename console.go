@@ -76,6 +76,7 @@ type ConsoleWriter struct {
 
 	// FieldsExclude defines contextual fields to not display in output.
 	FieldsExclude []string
+	TextSplit     string
 
 	FormatTimestamp     Formatter
 	FormatLevel         Formatter
@@ -94,9 +95,9 @@ type ConsoleWriter struct {
 // NewConsoleWriter creates and initializes a new ConsoleWriter.
 func NewConsoleWriter(options ...func(w *ConsoleWriter)) ConsoleWriter {
 	w := ConsoleWriter{
-		Out:          os.Stdout,
-		TimeFormat:   consoleDefaultTimeFormat,
-		PartsOrder:   consoleDefaultPartsOrder(),
+		Out:        os.Stdout,
+		TimeFormat: consoleDefaultTimeFormat,
+		PartsOrder: consoleDefaultPartsOrder(),
 	}
 
 	for _, opt := range options {
@@ -205,7 +206,11 @@ func (w ConsoleWriter) writeFields(evt map[string]interface{}, buf *bytes.Buffer
 
 	// Write space only if something has already been written to the buffer, and if there are fields.
 	if buf.Len() > 0 && len(fields) > 0 {
-		buf.WriteByte(' ')
+		if len(w.TextSplit) == 0 {
+			buf.WriteByte(' ')
+		} else {
+			buf.WriteString(w.TextSplit)
+		}
 	}
 
 	// Move the "error" field to the front
@@ -274,7 +279,11 @@ func (w ConsoleWriter) writeFields(evt map[string]interface{}, buf *bytes.Buffer
 		}
 
 		if i < len(fields)-1 { // Skip space for last field
-			buf.WriteByte(' ')
+			if len(w.TextSplit) == 0 {
+				buf.WriteByte(' ')
+			} else {
+				buf.WriteString(w.TextSplit)
+			}
 		}
 	}
 }
@@ -328,7 +337,11 @@ func (w ConsoleWriter) writePart(buf *bytes.Buffer, evt map[string]interface{}, 
 
 	if len(s) > 0 {
 		if buf.Len() > 0 {
-			buf.WriteByte(' ') // Write space only if not the first part
+			if len(w.TextSplit) == 0 {
+				buf.WriteByte(' ')
+			} else {
+				buf.WriteString(w.TextSplit)
+			} // Write space only if not the first part
 		}
 		buf.WriteString(s)
 	}
